@@ -1,0 +1,534 @@
+# Document OCR Manager
+
+Enterprise-grade document processing system with SharePoint/OneDrive integration, OCR capabilities, and AI-powered categorization.
+
+![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)
+![License](https://img.shields.io/badge/license-MIT-green.svg)
+![Node](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen.svg)
+
+## 🚀 Features
+
+- **SharePoint/OneDrive Integration** - Direct access to cloud storage
+- **OCR Processing** - Extract text from images and PDFs using Tesseract or Azure Computer Vision
+- **AI Categorization** - Automatic document classification using Claude AI
+- **Full-Text Search** - Search across document names and extracted content
+- **Category Management** - Organize documents with intelligent tagging
+- **Secure Authentication** - Microsoft OAuth integration
+- **Network Deployment Ready** - Deploy on local servers
+- **Responsive UI** - Modern React interface
+
+## 📋 Table of Contents
+
+- [System Requirements](#system-requirements)
+- [Quick Start](#quick-start)
+- [Manual Installation](#manual-installation)
+- [Configuration](#configuration)
+- [Usage](#usage)
+- [API Documentation](#api-documentation)
+- [Deployment](#deployment)
+- [Troubleshooting](#troubleshooting)
+- [Contributing](#contributing)
+
+## 💻 System Requirements
+
+### Required Software
+- **Node.js** v18.0.0 or higher
+- **MongoDB** v6.0 or higher
+- **npm** or **yarn**
+
+### Required Accounts
+- **Microsoft Azure** account (for SharePoint/OneDrive access)
+- **Anthropic** account (for AI categorization)
+
+### Operating Systems
+- Linux (Ubuntu 20.04+, Debian 11+, RHEL 8+)
+- macOS (10.15+)
+- Windows 10/11 or Windows Server 2019+
+
+## 🚀 Quick Start
+
+### Automated Installation (Recommended)
+
+```bash
+# Download the quick start script
+chmod +x quick-start.sh
+
+# Run the setup
+./quick-start.sh
+```
+
+The script will:
+1. ✅ Check system requirements
+2. ✅ Install all dependencies
+3. ✅ Create necessary directories
+4. ✅ Setup database and indexes
+5. ✅ Generate configuration files
+6. ✅ Create helper scripts
+
+### Start the Application
+
+```bash
+# Development mode (hot reload)
+./start-dev.sh
+
+# Production mode (PM2)
+./start-prod.sh
+```
+
+Access the application at `http://localhost:3000`
+
+## 🔧 Manual Installation
+
+### Step 1: Install MongoDB
+
+**Ubuntu/Debian:**
+```bash
+wget -qO - https://www.mongodb.org/static/pgp/server-6.0.asc | sudo apt-key add -
+echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu focal/mongodb-org/6.0 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-6.0.list
+sudo apt-get update
+sudo apt-get install -y mongodb-org
+sudo systemctl start mongod
+sudo systemctl enable mongod
+```
+
+**macOS:**
+```bash
+brew tap mongodb/brew
+brew install mongodb-community
+brew services start mongodb-community
+```
+
+**Windows:**
+Download from [MongoDB Download Center](https://www.mongodb.com/try/download/community)
+
+### Step 2: Clone Repository
+
+```bash
+mkdir document-ocr-manager
+cd document-ocr-manager
+```
+
+### Step 3: Setup Backend
+
+```bash
+mkdir backend
+cd backend
+
+# Install dependencies
+npm install express cors mongoose multer dotenv \
+  passport passport-azure-ad express-session \
+  @microsoft/microsoft-graph-client isomorphic-fetch \
+  tesseract.js pdf-parse @anthropic-ai/sdk
+
+npm install --save-dev nodemon
+
+# Create directories
+mkdir uploads backups
+
+# Copy server files (see artifacts provided)
+# - server.js
+# - db-setup.js
+# - package.json
+```
+
+### Step 4: Setup Frontend
+
+```bash
+cd ..
+npx create-react-app frontend
+cd frontend
+
+npm install lucide-react
+
+# Replace src/App.js with provided frontend code
+```
+
+### Step 5: Configure Environment
+
+Create `backend/.env`:
+```env
+NODE_ENV=development
+PORT=5000
+FRONTEND_URL=http://localhost:3000
+MONGODB_URI=mongodb://localhost:27017/document-manager
+SESSION_SECRET=your-random-secret-here
+
+# Azure AD
+AZURE_TENANT_ID=your-tenant-id
+AZURE_CLIENT_ID=your-client-id
+AZURE_CLIENT_SECRET=your-client-secret
+AZURE_REDIRECT_URI=http://localhost:5000/auth/callback
+
+# Anthropic
+ANTHROPIC_API_KEY=your-anthropic-key
+```
+
+Create `frontend/.env`:
+```env
+REACT_APP_API_URL=http://localhost:5000
+```
+
+## ⚙️ Configuration
+
+### Azure AD Setup
+
+1. Go to [Azure Portal](https://portal.azure.com)
+2. Navigate to **Azure Active Directory** → **App registrations**
+3. Click **New registration**
+4. Configure:
+   - Name: `Document OCR Manager`
+   - Redirect URI: `http://localhost:5000/auth/callback`
+5. Go to **Certificates & secrets** → Create new secret
+6. Go to **API permissions** → Add:
+   - `User.Read`
+   - `Files.Read.All`
+   - `Sites.Read.All`
+7. Grant admin consent
+8. Copy Tenant ID, Client ID, and Client Secret to `.env`
+
+### Anthropic API Setup
+
+1. Visit [Anthropic Console](https://console.anthropic.com/)
+2. Create an account
+3. Generate API key
+4. Add to `.env` as `ANTHROPIC_API_KEY`
+
+### Optional: Azure Computer Vision
+
+For better OCR quality:
+
+1. Create Azure Computer Vision resource
+2. Copy key and endpoint to `.env`:
+```env
+AZURE_VISION_KEY=your-key
+AZURE_VISION_ENDPOINT=https://your-region.api.cognitive.microsoft.com/
+```
+
+## 📖 Usage
+
+### Upload Documents
+
+**Option 1: Local Upload**
+1. Click "Upload Local"
+2. Select images or PDFs
+3. Wait for processing
+
+**Option 2: SharePoint/OneDrive**
+1. Click "SharePoint/OneDrive"
+2. Select a drive
+3. Browse files
+4. Click "Process" on desired files
+
+### Search and Browse
+
+1. Click "Browse & Search"
+2. Use search bar for full-text search
+3. Filter by category
+4. Click documents to view details
+
+### View Categories
+
+1. Click "Categories"
+2. See document distribution
+3. Click category to view documents
+
+## 🔌 API Documentation
+
+### Authentication Endpoints
+
+```
+GET  /auth/signin          - Initiate Microsoft OAuth
+POST /auth/callback        - OAuth callback
+GET  /auth/signout         - Sign out user
+GET  /auth/user            - Get current user
+```
+
+### Document Endpoints
+
+```
+GET    /api/documents           - List documents
+GET    /api/documents/:id       - Get document details
+POST   /api/upload              - Upload local file
+POST   /api/process-sharepoint-file - Process SharePoint file
+PUT    /api/documents/:id       - Update document
+DELETE /api/documents/:id       - Delete document
+```
+
+### SharePoint Endpoints
+
+```
+GET /api/drives                - List user drives
+GET /api/drives/:driveId/items - List drive items
+```
+
+### Statistics Endpoints
+
+```
+GET /api/stats/categories - Category statistics
+```
+
+### Example API Call
+
+```javascript
+// Upload document
+const formData = new FormData();
+formData.append('file', fileObject);
+
+const response = await fetch('http://localhost:5000/api/upload', {
+  method: 'POST',
+  credentials: 'include',
+  body: formData
+});
+
+const document = await response.json();
+```
+
+## 🌐 Network Deployment
+
+### Local Network Setup
+
+1. **Update Environment Variables:**
+
+```bash
+# Backend .env
+FRONTEND_URL=http://YOUR_SERVER_IP:3000
+
+# Frontend .env
+REACT_APP_API_URL=http://YOUR_SERVER_IP:5000
+```
+
+2. **Update Azure Redirect URI:**
+   - Azure Portal → App Registration
+   - Update to: `http://YOUR_SERVER_IP:5000/auth/callback`
+
+3. **Configure Firewall:**
+
+```bash
+# Linux
+sudo ufw allow 3000/tcp
+sudo ufw allow 5000/tcp
+
+# Windows
+# Add inbound rules in Windows Firewall for ports 3000, 5000
+```
+
+4. **Start Production Server:**
+
+```bash
+./start-prod.sh
+```
+
+### Docker Deployment
+
+```bash
+# Build and start
+docker-compose up -d
+
+# View logs
+docker-compose logs -f
+
+# Stop
+docker-compose down
+```
+
+### Reverse Proxy (Nginx)
+
+```nginx
+server {
+    listen 80;
+    server_name your-domain.com;
+
+    location / {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+
+    location /api {
+        proxy_pass http://localhost:5000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+}
+```
+
+## 🛠️ Database Management
+
+### Initialize Database
+
+```bash
+cd backend
+node db-setup.js setup
+```
+
+### Create Backup
+
+```bash
+./backup-db.sh
+# or
+cd backend && node db-setup.js backup
+```
+
+### Restore from Backup
+
+```bash
+cd backend
+node db-setup.js restore backups/backup-2024-01-15T10-30-00.json
+```
+
+### View Statistics
+
+```bash
+cd backend
+node db-setup.js stats
+```
+
+### Cleanup Orphaned Documents
+
+```bash
+cd backend
+node db-setup.js cleanup
+```
+
+## 🐛 Troubleshooting
+
+### MongoDB Connection Failed
+
+```bash
+# Check if MongoDB is running
+sudo systemctl status mongod
+
+# Start MongoDB
+sudo systemctl start mongod
+
+# Check connection
+mongosh mongodb://localhost:27017
+```
+
+### CORS Errors
+
+Update `backend/server.js`:
+```javascript
+app.use(cors({
+  origin: ['http://localhost:3000', 'http://YOUR_SERVER_IP:3000'],
+  credentials: true
+}));
+```
+
+### Azure OAuth Redirect Mismatch
+
+- Ensure redirect URI in Azure exactly matches your callback URL
+- Check http vs https
+- Verify port numbers
+
+### OCR Not Working
+
+Install system dependencies:
+
+**Ubuntu/Debian:**
+```bash
+sudo apt-get install tesseract-ocr
+```
+
+**macOS:**
+```bash
+brew install tesseract
+```
+
+**Windows:**
+Download from [Tesseract GitHub](https://github.com/UB-Mannheim/tesseract/wiki)
+
+### Port Already in Use
+
+```bash
+# Kill process on port 5000
+lsof -ti:5000 | xargs kill -9
+
+# Kill process on port 3000
+lsof -ti:3000 | xargs kill -9
+```
+
+## 📊 Performance Optimization
+
+### For Large-Scale Deployments
+
+1. **Enable Clustering:**
+```javascript
+const cluster = require('cluster');
+const numCPUs = require('os').cpus().length;
+
+if (cluster.isMaster) {
+  for (let i = 0; i < numCPUs; i++) {
+    cluster.fork();
+  }
+} else {
+  // Start server
+}
+```
+
+2. **Add Redis Caching:**
+```bash
+npm install redis
+```
+
+3. **Implement Job Queue:**
+```bash
+npm install bull
+```
+
+4. **Database Optimization:**
+```bash
+cd backend
+node db-setup.js setup  # Creates indexes
+```
+
+## 🔒 Security Best Practices
+
+- ✅ Change SESSION_SECRET to a strong random value
+- ✅ Enable HTTPS in production
+- ✅ Implement rate limiting
+- ✅ Regular security updates
+- ✅ Use environment variables for secrets
+- ✅ Enable MongoDB authentication
+- ✅ Regular backups
+- ✅ Monitor logs for suspicious activity
+
+## 📝 License
+
+MIT License - see LICENSE file for details
+
+## 🤝 Support
+
+For issues, questions, or contributions:
+- GitHub Issues: [Create an issue]
+- Documentation: See deployment guide
+- Email: support@yourcompany.com
+
+## 🎯 Roadmap
+
+- [ ] Batch processing for multiple folders
+- [ ] Email notifications
+- [ ] Advanced search with Elasticsearch
+- [ ] Document versioning
+- [ ] Export to CSV/Excel
+- [ ] Role-based access control
+- [ ] Audit logging
+- [ ] Mobile app
+- [ ] Multi-language OCR support
+- [ ] Document comparison tools
+
+## 📚 Additional Resources
+
+- [Microsoft Graph API Documentation](https://docs.microsoft.com/en-us/graph/)
+- [Anthropic API Documentation](https://docs.anthropic.com/)
+- [Tesseract OCR Guide](https://github.com/tesseract-ocr/tesseract)
+- [MongoDB Manual](https://docs.mongodb.com/)
+- [Express.js Documentation](https://expressjs.com/)
+- [React Documentation](https://react.dev/)
+
+---
+
+**Built with ❤️ for enterprise document management**
