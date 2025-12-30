@@ -1,0 +1,356 @@
+import React, { useState } from 'react';
+import { FileText, Search, Upload, FolderOpen, Tag, Eye, Download, RefreshCw } from 'lucide-react';
+
+const DocumentManagerPOC = () => {
+  const [view, setView] = useState('upload');
+  const [documents, setDocuments] = useState([]);
+  const [processing, setProcessing] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [selectedDoc, setSelectedDoc] = useState(null);
+
+  // Simulated OCR and categorization
+  const simulateOCR = (file) => {
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        // Simulate extracted text based on filename
+        const mockTexts = {
+          invoice: "INVOICE\nDate: 2024-01-15\nAmount: $1,250.00\nVendor: ABC Corp\nPayment due within 30 days",
+          contract: "SERVICE AGREEMENT\nThis agreement entered on January 1, 2024\nBetween Party A and Party B\nTerms and Conditions apply",
+          report: "QUARTERLY REPORT\nQ4 2023 Financial Summary\nRevenue: $500,000\nExpenses: $350,000\nNet Profit: $150,000",
+          receipt: "RECEIPT\nStore: Tech Shop\nDate: 2024-01-20\nItem: Laptop - $899.99\nTax: $72.00\nTotal: $971.99"
+        };
+        
+        const filename = file.name.toLowerCase();
+        let extractedText = "Sample document text extracted via OCR...";
+        
+        for (let key in mockTexts) {
+          if (filename.includes(key)) {
+            extractedText = mockTexts[key];
+            break;
+          }
+        }
+        
+        resolve(extractedText);
+      }, 1500);
+    });
+  };
+
+  const categorizeDocument = (text, filename) => {
+    const lower = (text + filename).toLowerCase();
+    
+    if (lower.includes('invoice') || lower.includes('bill')) return 'Invoices';
+    if (lower.includes('contract') || lower.includes('agreement')) return 'Contracts';
+    if (lower.includes('report') || lower.includes('summary')) return 'Reports';
+    if (lower.includes('receipt') || lower.includes('purchase')) return 'Receipts';
+    if (lower.includes('memo') || lower.includes('note')) return 'Memos';
+    
+    return 'Uncategorized';
+  };
+
+  const handleFileUpload = async (e) => {
+    const files = Array.from(e.target.files);
+    setProcessing(true);
+    
+    const newDocs = [];
+    
+    for (let file of files) {
+      const extractedText = await simulateOCR(file);
+      const category = categorizeDocument(extractedText, file.name);
+      
+      newDocs.push({
+        id: Date.now() + Math.random(),
+        name: file.name,
+        category,
+        extractedText,
+        uploadDate: new Date().toISOString(),
+        size: file.size
+      });
+    }
+    
+    setDocuments([...documents, ...newDocs]);
+    setProcessing(false);
+    setView('browse');
+  };
+
+  const categories = ['all', ...new Set(documents.map(d => d.category))];
+  
+  const filteredDocs = documents.filter(doc => {
+    const matchesSearch = doc.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         doc.extractedText.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = selectedCategory === 'all' || doc.category === selectedCategory;
+    return matchesSearch && matchesCategory;
+  });
+
+  const categoryStats = categories.slice(1).map(cat => ({
+    name: cat,
+    count: documents.filter(d => d.category === cat).length
+  }));
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-800 flex items-center gap-3">
+                <FolderOpen className="text-blue-600" size={36} />
+                SharePoint OCR Document Manager
+              </h1>
+              <p className="text-gray-600 mt-2">Proof of Concept - Automated Document Processing & Categorization</p>
+            </div>
+            <div className="text-right">
+              <div className="text-sm text-gray-500">Total Documents</div>
+              <div className="text-3xl font-bold text-blue-600">{documents.length}</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Navigation */}
+        <div className="bg-white rounded-lg shadow-lg p-4 mb-6">
+          <div className="flex gap-4">
+            <button
+              onClick={() => setView('upload')}
+              className={`px-6 py-3 rounded-lg font-medium transition-all flex items-center gap-2 ${
+                view === 'upload' 
+                  ? 'bg-blue-600 text-white shadow-md' 
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              <Upload size={20} />
+              Upload & Process
+            </button>
+            <button
+              onClick={() => setView('browse')}
+              className={`px-6 py-3 rounded-lg font-medium transition-all flex items-center gap-2 ${
+                view === 'browse' 
+                  ? 'bg-blue-600 text-white shadow-md' 
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              <Search size={20} />
+              Browse & Search
+            </button>
+            <button
+              onClick={() => setView('categories')}
+              className={`px-6 py-3 rounded-lg font-medium transition-all flex items-center gap-2 ${
+                view === 'categories' 
+                  ? 'bg-blue-600 text-white shadow-md' 
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              <Tag size={20} />
+              Categories
+            </button>
+          </div>
+        </div>
+
+        {/* Upload View */}
+        {view === 'upload' && (
+          <div className="bg-white rounded-lg shadow-lg p-8">
+            <h2 className="text-2xl font-bold text-gray-800 mb-6">Upload Documents for OCR Processing</h2>
+            
+            <div className="border-4 border-dashed border-gray-300 rounded-lg p-12 text-center hover:border-blue-400 transition-colors">
+              <input
+                type="file"
+                multiple
+                onChange={handleFileUpload}
+                className="hidden"
+                id="fileInput"
+                accept="image/*,.pdf"
+                disabled={processing}
+              />
+              <label htmlFor="fileInput" className="cursor-pointer">
+                {processing ? (
+                  <div className="flex flex-col items-center">
+                    <RefreshCw className="text-blue-600 animate-spin mb-4" size={48} />
+                    <p className="text-xl font-medium text-gray-700">Processing documents...</p>
+                    <p className="text-gray-500 mt-2">Performing OCR and categorization</p>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center">
+                    <Upload className="text-gray-400 mb-4" size={48} />
+                    <p className="text-xl font-medium text-gray-700">Click to upload documents</p>
+                    <p className="text-gray-500 mt-2">Supports images and PDFs</p>
+                  </div>
+                )}
+              </label>
+            </div>
+
+            <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
+              <h3 className="font-bold text-blue-900 mb-3">How it works:</h3>
+              <ol className="space-y-2 text-blue-800">
+                <li>1. Upload documents from your computer (simulating SharePoint/OneDrive)</li>
+                <li>2. OCR extracts text from images and PDFs</li>
+                <li>3. AI automatically categorizes documents based on content</li>
+                <li>4. Browse, search, and view your organized document library</li>
+              </ol>
+            </div>
+          </div>
+        )}
+
+        {/* Browse View */}
+        {view === 'browse' && (
+          <div className="space-y-6">
+            {/* Search and Filter */}
+            <div className="bg-white rounded-lg shadow-lg p-6">
+              <div className="flex gap-4">
+                <div className="flex-1 relative">
+                  <Search className="absolute left-3 top-3 text-gray-400" size={20} />
+                  <input
+                    type="text"
+                    placeholder="Search documents by name or content..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+                <select
+                  value={selectedCategory}
+                  onChange={(e) => setSelectedCategory(e.target.value)}
+                  className="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  {categories.map(cat => (
+                    <option key={cat} value={cat}>
+                      {cat === 'all' ? 'All Categories' : cat}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Documents List */}
+            <div className="bg-white rounded-lg shadow-lg p-6">
+              <h2 className="text-2xl font-bold text-gray-800 mb-6">
+                Documents ({filteredDocs.length})
+              </h2>
+              
+              {filteredDocs.length === 0 ? (
+                <div className="text-center py-12 text-gray-500">
+                  <FileText size={48} className="mx-auto mb-4 opacity-50" />
+                  <p>No documents found. Upload some documents to get started!</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {filteredDocs.map(doc => (
+                    <div
+                      key={doc.id}
+                      className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer"
+                      onClick={() => setSelectedDoc(doc)}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3 flex-1">
+                          <FileText className="text-blue-600" size={24} />
+                          <div>
+                            <h3 className="font-medium text-gray-800">{doc.name}</h3>
+                            <p className="text-sm text-gray-500">
+                              {new Date(doc.uploadDate).toLocaleDateString()} • {(doc.size / 1024).toFixed(1)} KB
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
+                            {doc.category}
+                          </span>
+                          <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                            <Eye size={20} className="text-gray-600" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Categories View */}
+        {view === 'categories' && (
+          <div className="bg-white rounded-lg shadow-lg p-8">
+            <h2 className="text-2xl font-bold text-gray-800 mb-6">Document Categories</h2>
+            
+            {categoryStats.length === 0 ? (
+              <div className="text-center py-12 text-gray-500">
+                <Tag size={48} className="mx-auto mb-4 opacity-50" />
+                <p>No categories yet. Upload documents to see automatic categorization!</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {categoryStats.map(cat => (
+                  <div
+                    key={cat.name}
+                    className="border-2 border-gray-200 rounded-lg p-6 hover:border-blue-400 hover:shadow-lg transition-all cursor-pointer"
+                    onClick={() => {
+                      setSelectedCategory(cat.name);
+                      setView('browse');
+                    }}
+                  >
+                    <div className="flex items-center justify-between mb-4">
+                      <Tag className="text-blue-600" size={32} />
+                      <span className="text-3xl font-bold text-blue-600">{cat.count}</span>
+                    </div>
+                    <h3 className="text-xl font-bold text-gray-800">{cat.name}</h3>
+                    <p className="text-gray-500 text-sm mt-2">Click to view documents</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Document Detail Modal */}
+        {selectedDoc && (
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-6 z-50"
+            onClick={() => setSelectedDoc(null)}
+          >
+            <div 
+              className="bg-white rounded-lg shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="p-6 border-b border-gray-200">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-2xl font-bold text-gray-800">{selectedDoc.name}</h2>
+                  <button
+                    onClick={() => setSelectedDoc(null)}
+                    className="text-gray-400 hover:text-gray-600 text-2xl"
+                  >
+                    ×
+                  </button>
+                </div>
+              </div>
+              
+              <div className="p-6 space-y-4">
+                <div>
+                  <h3 className="font-bold text-gray-700 mb-2">Category</h3>
+                  <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
+                    {selectedDoc.category}
+                  </span>
+                </div>
+                
+                <div>
+                  <h3 className="font-bold text-gray-700 mb-2">Extracted Text (OCR)</h3>
+                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 font-mono text-sm whitespace-pre-wrap">
+                    {selectedDoc.extractedText}
+                  </div>
+                </div>
+                
+                <div>
+                  <h3 className="font-bold text-gray-700 mb-2">Metadata</h3>
+                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-sm">
+                    <p><strong>Upload Date:</strong> {new Date(selectedDoc.uploadDate).toLocaleString()}</p>
+                    <p><strong>File Size:</strong> {(selectedDoc.size / 1024).toFixed(1)} KB</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default DocumentManagerPOC;
